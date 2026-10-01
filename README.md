@@ -20,28 +20,11 @@ ocr_review_rules  →  which review rules apply to those files (deterministic)
 
 | | |
 |---|---|
-| `ocr` | **1.9.0 or later** — `--format json` landed in 1.9.0. Verified against 1.12.11 on Windows x64. |
+| `ocr` | **1.9.0 or later** — `--format json` landed in 1.9.0. Verified against 1.12.11 on Windows x64. **Installed with the plugin**; no separate setup step. |
 | git | 2.41 or later (OCR reads diffs through git). |
 | DSH | Any build with plugin support. Verified on DSH Desktop 0.1.7-rc.2. |
 
 ## Install
-
-**1. Install the `ocr` CLI.** The plugin never installs anything by itself.
-
-```sh
-npm install --prefix "<DSH_HOME>/open-code-review" @alibaba-group/open-code-review
-```
-
-`<DSH_HOME>` is the harness data root (`$env:DSH_HOME`; by default `~/.dsh`, and
-`%APPDATA%\dsh-desktop\harness` for DSH Desktop). Installing to that prefix puts
-the binary exactly where the plugin's default `vendorDir` looks for it.
-
-A machine-wide `npm install -g @alibaba-group/open-code-review` also works — the
-plugin finds it on `PATH`, including by following npm's `ocr.cmd` shim to the
-native binary beside it. The plugin-managed prefix is just the more predictable
-of the two.
-
-**2. Install the plugin.** From this repository:
 
 ```sh
 dsh plugin --profile web add github:ashllll/dsh-open-code-review
@@ -55,9 +38,37 @@ The unscoped npm name `dsh-open-code-review` belongs to an unrelated project, so
 this package is scoped: once published, it installs as
 `dsh plugin --profile web add @ashllll/dsh-open-code-review`.
 
-**3. Refresh the page.** The tools appear as `ocr_review_scope`,
-`ocr_review_rules`, and `ocr_health`, and the `open-code-review` skill is added to
-the skill catalog.
+Refresh the page and the tools appear as `ocr_review_scope`, `ocr_review_rules`
+and `ocr_health`, and the `open-code-review` skill joins the skill catalog. That
+is the whole install: **the `ocr` binary arrives with the plugin.**
+
+### Where `ocr` comes from
+
+The plugin declares `@alibaba-group/open-code-review` as an
+`optionalDependency`, so your package manager fetches the native binary as part
+of installing the plugin. Upstream ships it in six `os`/`cpu`-gated platform
+packages with `preferUnplugged`, which means the right one lands as a real file
+on disk, and the launcher's `postinstall` — a download fallback — is never
+needed. That matters because the plugin market blocks build scripts by default.
+
+The binary is resolved in this order, and `ocr_health` reports which one won:
+
+| Order | Source | When it is used |
+|---|---|---|
+| 1 | `ocrPath` | You set it explicitly. |
+| 2 | `vendorDir` | A plugin-managed install at `<DSH_HOME>/open-code-review`. |
+| 3 | **bundled dependency** | The default: whatever your package manager installed with the plugin. |
+| 4 | `PATH` | A machine-wide `npm install -g @alibaba-group/open-code-review`, including by following npm's `ocr.cmd` shim to the native binary beside it. |
+
+Override with `ocrPath` if you want a specific build, or install into `vendorDir`
+if you would rather the binary sit outside the profile:
+
+```sh
+npm install --prefix "<DSH_HOME>/open-code-review" @alibaba-group/open-code-review
+```
+
+`<DSH_HOME>` is the harness data root (`$env:DSH_HOME`; `~/.dsh` by default, and
+`%APPDATA%\dsh-desktop\harness` for DSH Desktop).
 
 ## What it adds
 
@@ -144,15 +155,20 @@ description:
 `git` is the registry's "Git & Code Review" category. The description is quoted
 because it contains `: `, which YAML would otherwise parse as a nested key.
 
-**Do not open that PR yet.** The registry enforces a 24-hour minimum repository
-age, and this repository was created on 2026-10-01; a PR before 2026-10-02 fails
-CI on that check. Its other gates are already satisfied — `dsh.bundle` is declared
-in `package.json`, and the description carries both locales.
+**The PR is open — [#6343](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/6343).**
+The registry enforces a 24-hour minimum repository age, and this repository was
+created on 2026-10-01, so the only failing check is that one. It re-runs by
+itself and clears without a resubmission; running the registry's own
+`scripts/check-submission.mjs` against this entry reports that single problem and
+nothing else. The remaining gates — `dsh.bundle` declared, repo present and not
+archived, not DSH itself — pass, and both locales are present.
 
 ## Security
 
-- **No implicit installs.** The plugin never reaches the network. A missing binary
-  fails with the exact command to run.
+- **No network access at call time.** The plugin itself never makes a request.
+  The `ocr` binary is fetched by your package manager as part of installing the
+  plugin (about 55 MB), not by the plugin while a tool runs. If it is missing,
+  the tool fails with the exact command to restore it.
 - **No shell.** `ocr` is spawned with `shell: false` from a resolved native
   executable, so model-supplied refs and paths are never interpolated into a
   command line. npm's `.cmd` shim is treated as a signpost to the native binary
@@ -174,8 +190,9 @@ in `package.json`, and the description carries both locales.
 node test/smoke.mjs
 ```
 
-29 checks covering argument building, binary resolution across the npm layouts,
-delegation JSON parsing, and frontmatter handling. When an `ocr` binary is
+32 checks covering argument building, binary resolution across the npm layouts
+(bundled dependency, npm shims, vendor directory, `PATH`), delegation JSON
+parsing, and frontmatter handling. When an `ocr` binary is
 resolvable, it also runs the real thing: `ocr version`, a `delegate preview`
 against a throwaway git repository, and a `delegate rule` resolving the Python
 ruleset. With no `ocr` present those three are reported as skipped rather than

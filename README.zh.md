@@ -17,26 +17,11 @@ ocr_review_rules  →  这些文件适用哪些规则（确定性）
 
 | | |
 |---|---|
-| `ocr` | **1.9.0 及以上**——`--format json` 自 1.9.0 引入。已在 Windows x64 + 1.12.11 上验证。 |
+| `ocr` | **1.9.0 及以上**——`--format json` 自 1.9.0 引入。已在 Windows x64 + 1.12.11 上验证。**随插件一起安装**，无需单独配置。 |
 | git | 2.41 及以上（OCR 通过 git 读取 diff）。 |
 | DSH | 任意支持插件的版本。已在 DSH Desktop 0.1.7-rc.2 上验证。 |
 
 ## 安装
-
-**1. 安装 `ocr` CLI。** 插件自身不会安装任何东西。
-
-```sh
-npm install --prefix "<DSH_HOME>/open-code-review" @alibaba-group/open-code-review
-```
-
-`<DSH_HOME>` 是 harness 数据根目录（环境变量 `$env:DSH_HOME`；默认 `~/.dsh`，
-DSH Desktop 为 `%APPDATA%\dsh-desktop\harness`）。装到该前缀下，二进制正好落在插件默认
-`vendorDir` 查找的位置。
-
-全局安装 `npm install -g @alibaba-group/open-code-review` 同样可用——插件会在 `PATH` 上找到它，
-Windows 下还会顺着 npm 的 `ocr.cmd` 垫片找到旁边的原生二进制。两者相比，插件自管的前缀更可预测。
-
-**2. 安装插件。** 从本仓库安装：
 
 ```sh
 dsh plugin --profile web add github:ashllll/dsh-open-code-review
@@ -48,8 +33,33 @@ dsh plugin --profile web add github:ashllll/dsh-open-code-review
 npm 上无作用域的 `dsh-open-code-review` 属于另一个无关项目，因此本包使用作用域名：
 发布后安装命令为 `dsh plugin --profile web add @ashllll/dsh-open-code-review`。
 
-**3. 刷新页面。** 三个工具 `ocr_review_scope`、`ocr_review_rules`、`ocr_health` 即出现，
-技能目录中会多出 `open-code-review`。
+刷新页面后，三个工具 `ocr_review_scope`、`ocr_review_rules`、`ocr_health` 即出现，
+技能目录中会多出 `open-code-review`。安装到此结束：**`ocr` 二进制随插件一起到位。**
+
+### `ocr` 从哪里来
+
+插件把 `@alibaba-group/open-code-review` 声明为 `optionalDependency`，因此包管理器在安装插件时
+就会把原生二进制一并拉下来。上游把它放在六个按 `os`/`cpu` 门控的平台包里，并带
+`preferUnplugged`——落到磁盘上的是真实文件，启动器的 `postinstall`（下载兜底）根本不需要执行。
+这一点很关键：插件市场默认禁止构建脚本。
+
+解析顺序如下，`ocr_health` 会报告实际命中的来源：
+
+| 顺序 | 来源 | 何时使用 |
+|---|---|---|
+| 1 | `ocrPath` | 你显式指定。 |
+| 2 | `vendorDir` | 插件自管安装目录 `<DSH_HOME>/open-code-review`。 |
+| 3 | **随包依赖** | 默认：包管理器随插件装好的那个。 |
+| 4 | `PATH` | 全局 `npm install -g @alibaba-group/open-code-review`，Windows 下还会顺着 npm 的 `ocr.cmd` 垫片找到旁边的原生二进制。 |
+
+想固定某个构建就用 `ocrPath`；想把二进制放在 profile 之外就装进 `vendorDir`：
+
+```sh
+npm install --prefix "<DSH_HOME>/open-code-review" @alibaba-group/open-code-review
+```
+
+`<DSH_HOME>` 是 harness 数据根目录（环境变量 `$env:DSH_HOME`；默认 `~/.dsh`，
+DSH Desktop 为 `%APPDATA%\dsh-desktop\harness`）。
 
 ## 插件提供了什么
 
@@ -127,13 +137,16 @@ description:
 `git` 即注册表中的「Git 与代码评审」分类。描述加引号是因为其中含 `: `，
 否则 YAML 会把它解析成嵌套键。
 
-**暂时不要提这个 PR。** 注册表要求仓库创建满 24 小时，而本仓库创建于 2026-10-01，
-在 2026-10-02 之前提交会在该项 CI 检查上失败。其余门槛均已满足——`package.json` 已声明
-`dsh.bundle`，双语描述齐备。
+**PR 已提交——[#6343](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/6343)。**
+注册表要求仓库创建满 24 小时，而本仓库创建于 2026-10-01，因此唯一未通过的就是该项检查。
+它会自行重跑并自动转绿，无需重新提交；用注册表自带的 `scripts/check-submission.mjs`
+对本地条目运行，报告出的也只有这一个问题。其余门槛——已声明 `dsh.bundle`、仓库存在且未归档、
+不是 DSH 本身——全部通过，双语描述齐备。
 
 ## 安全
 
-- **不隐式安装。** 插件从不联网。缺少二进制时会失败并给出确切命令。
+- **调用时不联网。** 插件自身从不发起请求。`ocr` 二进制由包管理器在安装插件时拉取（约 55 MB），
+  而不是插件在工具运行时去下载。若二进制缺失，工具会失败并给出确切的恢复命令。
 - **不经 shell。** `ocr` 通过解析出的原生可执行文件以 `shell: false` 启动，模型传入的 ref 与路径
   不会被拼进命令行。npm 的 `.cmd` 垫片只当作路标用于定位原生二进制，不执行它——这同时跳过了
   启动器的后台更新检查。
@@ -149,7 +162,8 @@ description:
 node test/smoke.mjs
 ```
 
-29 项检查，覆盖参数构建、各种 npm 目录布局下的二进制解析、委托 JSON 解析、frontmatter 处理。
+32 项检查，覆盖参数构建、各种 npm 目录布局下的二进制解析（随包依赖、npm 垫片、
+vendor 目录、`PATH`）、委托 JSON 解析、frontmatter 处理。
 当能解析到 `ocr` 时，还会跑真实链路：`ocr version`、针对临时 git 仓库的 `delegate preview`、
 以及解析 Python 规则集的 `delegate rule`。没有 `ocr` 时这三项报告为 skipped，而不是失败。
 

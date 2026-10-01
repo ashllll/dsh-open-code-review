@@ -36,13 +36,7 @@ DSH Desktop 为 `%APPDATA%\dsh-desktop\harness`）。装到该前缀下，二进
 全局安装 `npm install -g @alibaba-group/open-code-review` 同样可用——插件会在 `PATH` 上找到它，
 Windows 下还会顺着 npm 的 `ocr.cmd` 垫片找到旁边的原生二进制。两者相比，插件自管的前缀更可预测。
 
-**2. 安装插件。**
-
-```sh
-dsh plugin --profile web add dsh-open-code-review
-```
-
-尚未发布到 npm 时，可直接从本仓库安装：
+**2. 安装插件。** 从本仓库安装：
 
 ```sh
 dsh plugin --profile web add github:ashllll/dsh-open-code-review
@@ -50,6 +44,9 @@ dsh plugin --profile web add github:ashllll/dsh-open-code-review
 
 本地检出也可以——`dsh plugin --profile web add <tgz 绝对路径>`。
 注意：pnpm 会把**相对**路径按当前目录解析，而不是 profile 目录，所以请传绝对路径。
+
+npm 上无作用域的 `dsh-open-code-review` 属于另一个无关项目，因此本包使用作用域名：
+发布后安装命令为 `dsh plugin --profile web add @ashllll/dsh-open-code-review`。
 
 **3. 刷新页面。** 三个工具 `ocr_review_scope`、`ocr_review_rules`、`ocr_health` 即出现，
 技能目录中会多出 `open-code-review`。
@@ -81,7 +78,7 @@ OCR 引擎没有任何重写——插件驱动的是真正的 `ocr` 二进制。
 
 ```yaml
 - id: open-code-review
-  name: dsh-open-code-review
+  name: '@ashllll/dsh-open-code-review'
   config:
     vendorDir: !!js dshHomePath('open-code-review')   # 默认值
     ocrPath: ''                                       # 显式指定二进制或安装目录，优先级最高
@@ -109,6 +106,30 @@ OCR 引擎没有任何重写——插件驱动的是真正的 `ocr` 二进制。
 自定义规则完全可用：在仓库里放 `.opencodereview/rule.json`，`ocr_review_rules` 会自动解析，
 并在结果里标注 `source: project`。格式见
 [OCR 规则文档](https://github.com/alibaba/open-code-review)。
+
+## 上架插件市场
+
+插件市场浏览的是一份精选注册表——
+[awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)——
+因此上架只需向那个仓库提一个包含单个 YAML 文件的 PR，本仓库无需改动。条目已备好：
+
+`data/plugins/ashllll__dsh-open-code-review.yml`
+
+```yaml
+url: https://github.com/ashllll/dsh-open-code-review
+name: ashllll/dsh-open-code-review
+category: git
+description:
+  en: 'Review code with Open Code Review: deterministic scope and rule resolution, judged by your own DSH model, no API key.'
+  zh: '用 Open Code Review 评审代码：确定性的范围与规则解析，由你自己的 DSH 模型判断，无需 API Key。'
+```
+
+`git` 即注册表中的「Git 与代码评审」分类。描述加引号是因为其中含 `: `，
+否则 YAML 会把它解析成嵌套键。
+
+**暂时不要提这个 PR。** 注册表要求仓库创建满 24 小时，而本仓库创建于 2026-10-01，
+在 2026-10-02 之前提交会在该项 CI 检查上失败。其余门槛均已满足——`package.json` 已声明
+`dsh.bundle`，双语描述齐备。
 
 ## 安全
 

@@ -41,13 +41,7 @@ plugin finds it on `PATH`, including by following npm's `ocr.cmd` shim to the
 native binary beside it. The plugin-managed prefix is just the more predictable
 of the two.
 
-**2. Install the plugin.**
-
-```sh
-dsh plugin --profile web add dsh-open-code-review
-```
-
-Or, before it is published to npm, straight from this repository:
+**2. Install the plugin.** From this repository:
 
 ```sh
 dsh plugin --profile web add github:ashllll/dsh-open-code-review
@@ -56,6 +50,10 @@ dsh plugin --profile web add github:ashllll/dsh-open-code-review
 A local checkout works too — `dsh plugin --profile web add <abs-path-to-.tgz>`.
 Note that pnpm resolves a *relative* tarball path against the current directory,
 not the profile, so pass an absolute path.
+
+The unscoped npm name `dsh-open-code-review` belongs to an unrelated project, so
+this package is scoped: once published, it installs as
+`dsh plugin --profile web add @ashllll/dsh-open-code-review`.
 
 **3. Refresh the page.** The tools appear as `ocr_review_scope`,
 `ocr_review_rules`, and `ocr_health`, and the `open-code-review` skill is added to
@@ -92,7 +90,7 @@ The plugin mounts with one patch row and declares three settings:
 
 ```yaml
 - id: open-code-review
-  name: dsh-open-code-review
+  name: '@ashllll/dsh-open-code-review'
   config:
     vendorDir: !!js dshHomePath('open-code-review')   # default
     ocrPath: ''                                       # explicit binary or install dir; wins over everything
@@ -124,6 +122,32 @@ Custom rules are still fully available: put a `.opencodereview/rule.json` in the
 repository and `ocr_review_rules` resolves it automatically, reporting
 `source: project`. See
 [OCR's rule documentation](https://github.com/alibaba/open-code-review).
+
+## Listing in the Plugin Market
+
+The market browses a curated registry —
+[awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin) —
+so being listed is one YAML file in a PR against that repository, not a change
+here. The entry is prepared and ready to submit:
+
+`data/plugins/ashllll__dsh-open-code-review.yml`
+
+```yaml
+url: https://github.com/ashllll/dsh-open-code-review
+name: ashllll/dsh-open-code-review
+category: git
+description:
+  en: 'Review code with Open Code Review: deterministic scope and rule resolution, judged by your own DSH model, no API key.'
+  zh: '用 Open Code Review 评审代码：确定性的范围与规则解析，由你自己的 DSH 模型判断，无需 API Key。'
+```
+
+`git` is the registry's "Git & Code Review" category. The description is quoted
+because it contains `: `, which YAML would otherwise parse as a nested key.
+
+**Do not open that PR yet.** The registry enforces a 24-hour minimum repository
+age, and this repository was created on 2026-10-01; a PR before 2026-10-02 fails
+CI on that check. Its other gates are already satisfied — `dsh.bundle` is declared
+in `package.json`, and the description carries both locales.
 
 ## Security
 

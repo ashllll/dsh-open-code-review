@@ -1,5 +1,5 @@
 {
-  "name": "dsh-open-code-review",
+  "name": "@ashllll/dsh-open-code-review",
   "version": "0.1.0",
   "description": "DeepSeek Harness plugin for Open Code Review: deterministic review scope, rule resolution, and line-level findings for DSH agents.",
   "type": "module",

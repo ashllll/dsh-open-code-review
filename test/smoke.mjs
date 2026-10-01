@@ -231,6 +231,67 @@ check("an unrelated PATH entry costs no lookup and is skipped", () => {
   }
 });
 
+/** Lay out the platform package the way npm and pnpm both do. */
+function installPlatformBinary(nodeModules) {
+  const bin = join(nodeModules, "@alibaba-group", platformPackageDir(process.platform, process.arch), "bin");
+  mkdirSync(bin, { recursive: true });
+  const executable = join(bin, BINARY_FILENAME);
+  writeFileSync(executable, "");
+  return executable;
+}
+
+check("a hoisted dependency beside the package is found", () => {
+  // npm, and a hoisted pnpm layout: <profile>/node_modules/@scope/pkg, with the
+  // binary as a sibling under the same node_modules. This is what a plugin
+  // install produces, so it must resolve with no other configuration.
+  const profile = mkdtempSync(join(tmpdir(), "ocr-hoisted-"));
+  try {
+    const packageRoot = join(profile, "node_modules", "@ashllll", "dsh-open-code-review");
+    mkdirSync(packageRoot, { recursive: true });
+    const executable = installPlatformBinary(join(profile, "node_modules"));
+    assert.deepEqual(resolveOcr({ packageRoot, env: {} }), { command: executable, source: "dependency" });
+  } finally {
+    rmSync(profile, { recursive: true, force: true });
+  }
+});
+
+check("a pnpm-nested dependency inside the package is found", () => {
+  const profile = mkdtempSync(join(tmpdir(), "ocr-nested-"));
+  try {
+    const packageRoot = join(profile, "node_modules", ".pnpm", "dsh-open-code-review@0.1.0", "node_modules", "dsh-open-code-review");
+    mkdirSync(packageRoot, { recursive: true });
+    const executable = installPlatformBinary(join(packageRoot, "node_modules"));
+    assert.deepEqual(resolveOcr({ packageRoot, env: {} }), { command: executable, source: "dependency" });
+  } finally {
+    rmSync(profile, { recursive: true, force: true });
+  }
+});
+
+check("the bundled dependency wins over PATH but loses to an explicit ocrPath", () => {
+  const root = mkdtempSync(join(tmpdir(), "ocr-order-"));
+  try {
+    const packageRoot = join(root, "node_modules", "dsh-open-code-review");
+    mkdirSync(packageRoot, { recursive: true });
+    const bundled = installPlatformBinary(join(root, "node_modules"));
+
+    const pathDir = join(root, "path");
+    mkdirSync(pathDir, { recursive: true });
+    const onPath = join(pathDir, BINARY_FILENAME);
+    writeFileSync(onPath, "");
+
+    assert.deepEqual(resolveOcr({ packageRoot, env: { PATH: pathDir } }), {
+      command: bundled,
+      source: "dependency",
+    });
+    assert.deepEqual(resolveOcr({ packageRoot, ocrPath: onPath, env: { PATH: pathDir } }), {
+      command: onPath,
+      source: "ocrPath",
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 process.stdout.write("bundled skill\n");
 
 check("frontmatter is stripped and the body kept", () => {
@@ -274,7 +335,11 @@ process.stdout.write("live binary (skipped when ocr is absent)\n");
 // binary is resolvable, and say so plainly when it is not.
 let live;
 try {
-  live = resolveOcr({ vendorDir: process.env.OCR_VENDOR_DIR ?? "", env: process.env });
+  live = resolveOcr({
+    vendorDir: process.env.OCR_VENDOR_DIR ?? "",
+    packageRoot: PACKAGE_ROOT,
+    env: process.env,
+  });
 } catch {
   live = undefined;
 }

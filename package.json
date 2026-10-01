@@ -48,6 +48,9 @@
       "patch": "./cordis.patch.yml"
     }
   },
+  "optionalDependencies": {
+    "@alibaba-group/open-code-review": "^1.12.11"
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.0.4",
     "@deepseek-ai/dsh-skill": ">=0.1.5-rc.1",

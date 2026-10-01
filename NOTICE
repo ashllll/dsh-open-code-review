@@ -1,0 +1,47 @@
+dsh-open-code-review
+Copyright 2026 dsh-open-code-review Contributors
+
+This product is a DeepSeek Harness plugin that integrates with, and is derived
+in part from, Open Code Review:
+
+  Open Code Review (OpenCodeReview)
+  Copyright 2026 alibaba/open-code-review Contributors
+  https://github.com/alibaba/open-code-review
+  Licensed under the Apache License, Version 2.0
+
+Derived material
+----------------
+
+The following files contain material copied from or adapted from
+alibaba/open-code-review, and carry notices stating that they were changed:
+
+  skills/open-code-review/SKILL.md
+      Ported from plugins/open-code-review/skills/open-code-review-delegate/SKILL.md.
+      Changed for DeepSeek Harness: the `ocr delegate preview` and
+      `ocr delegate rule` subcommands are reached through the
+      `ocr_review_scope` and `ocr_review_rules` tools instead of a shell, and
+      the diff-reading and reporting steps are rewritten for DSH's tool surface.
+
+  lib/ocr.js, lib/index.js
+      The command-line contract — subcommand and flag names, the paired-ref and
+      mutually-exclusive argument rules, the 10 MiB output ceiling, the
+      process-group kill on timeout, and the delegation JSON schema — follows
+      plugins/open-code-review/opencode/open-code-review.ts and
+      cmd/opencodereview/delegate_cmd.go. The implementation is new JavaScript
+      with no code copied, but the interface it implements is theirs.
+
+Not derived
+-----------
+
+This package does not contain or redistribute the Open Code Review binary. It
+locates and executes an `ocr` installation that the user installs separately:
+
+  npm install -g @alibaba-group/open-code-review
+
+Trademarks
+----------
+
+"Open Code Review" and "OpenCodeReview" are used here only to describe the
+origin of the integrated software, as permitted by Section 6 of the Apache
+License. This package is an independent integration and is not endorsed by or
+affiliated with Alibaba Group.

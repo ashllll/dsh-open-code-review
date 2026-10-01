@@ -1,0 +1,21 @@
+# DeepSeek Harness profile layer for Open Code Review.
+#
+# `dsh plugin --profile web add dsh-open-code-review` installs this package into
+# the profile and — because package.json declares `dsh.bundle.patch` — appends
+# this file to the profile's ordered bundle list. Nothing else needs editing:
+# the row below mounts on the host plane, where the tools registry and the
+# system-prompt sections reach every session.
+#
+# `vendorDir` is where the plugin looks for a plugin-managed `ocr` binary
+# (`npm install --prefix <vendorDir> @alibaba-group/open-code-review`). A
+# machine-wide `npm i -g` install is found on PATH instead, and an explicit
+# `ocrPath` overrides both. To turn the plugin off for one profile without
+# uninstalling, patch this row in the profile's own cordis.patch.yml:
+#
+#   - id: open-code-review
+#     disabled: true
+- insert:
+    - id: open-code-review
+      name: 'dsh-open-code-review'
+      config:
+        vendorDir: !!js dshHomePath('open-code-review')
